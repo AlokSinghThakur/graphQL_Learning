@@ -1,4 +1,5 @@
 const { ApolloServer } = require('apollo-server');
+const { PrismaClient } = require('@prisma/client')
 
 const fs = require('fs');
 const path = require('path');
@@ -14,26 +15,24 @@ let links = [{
   const resolvers = {
     Query: {
       info: () => `This is the API of a Hackernews Clone`,
-      feed: () => links,
+      feed: async (parent, args, context) => {
+        return context.prisma.link.findMany()
+      },
     },
     Mutation: {
-      // 2
-      post: (parent, args) => {
-    
-      let idCount = links.length
-  
-         const link = {
-          id: `link-${idCount++}`,
-          description: args.description,
-          url: args.url,
-        }
-        links.push(link)
-        return link
-      }
-    },
+        post: (parent, args, context, info) => {
+          const newLink = context.prisma.link.create({
+            data: {
+              url: args.url,
+              description: args.description,
+            },
+          })
+          return newLink
+        },
+      },
   }
 
-
+  const prisma = new PrismaClient()
   
 const server = new ApolloServer({
     typeDefs: fs.readFileSync(
@@ -41,6 +40,9 @@ const server = new ApolloServer({
       'utf8'
     ),
     resolvers,
+    context: {
+        prisma,
+      }
   })
 // 1
 // const typeDefs = `
